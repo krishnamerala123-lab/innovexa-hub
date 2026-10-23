@@ -14,13 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      invitations: {
+        Row: {
+          created_at: string
+          id: string
+          match_score: number | null
+          message: string
+          profile_id: string
+          project_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_score?: number | null
+          message?: string
+          profile_id: string
+          project_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_score?: number | null
+          message?: string
+          profile_id?: string
+          project_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          availability_hours: number
+          collab_prefs: string
+          created_at: string
+          full_name: string
+          id: string
+          interests: string[]
+          intro: string
+          is_sample: boolean
+          past_projects: string
+          portfolio_links: string[]
+          soft_skills: string[]
+          tech_skills: string[]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          availability_hours?: number
+          collab_prefs?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          interests?: string[]
+          intro?: string
+          is_sample?: boolean
+          past_projects?: string
+          portfolio_links?: string[]
+          soft_skills?: string[]
+          tech_skills?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          availability_hours?: number
+          collab_prefs?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          interests?: string[]
+          intro?: string
+          is_sample?: boolean
+          past_projects?: string
+          portfolio_links?: string[]
+          soft_skills?: string[]
+          tech_skills?: string[]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          checklist: Json
+          created_at: string
+          expected_hours: number
+          id: string
+          interests: string[]
+          is_sample: boolean
+          owner_id: string
+          problem: string
+          required_skills: string[]
+          roadmap_stage: number
+          solution: string
+          stage: string
+          target_users: string
+          title: string
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          expected_hours?: number
+          id?: string
+          interests?: string[]
+          is_sample?: boolean
+          owner_id: string
+          problem?: string
+          required_skills?: string[]
+          roadmap_stage?: number
+          solution?: string
+          stage?: string
+          target_users?: string
+          title: string
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          expected_hours?: number
+          id?: string
+          interests?: string[]
+          is_sample?: boolean
+          owner_id?: string
+          problem?: string
+          required_skills?: string[]
+          roadmap_stage?: number
+          solution?: string
+          stage?: string
+          target_users?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      my_profile_id: { Args: never; Returns: string }
+      owns_project: { Args: { _project: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
