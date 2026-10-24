@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Other students' profiles are read only via the student_directory() database function; the profiles table SELECT policy is own-row only. Why: hides account identifiers while keeping matching working.
