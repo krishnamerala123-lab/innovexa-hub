@@ -176,6 +176,23 @@ export type Database = {
     Functions: {
       my_profile_id: { Args: never; Returns: string }
       owns_project: { Args: { _project: string }; Returns: boolean }
+      student_directory: {
+        Args: never
+        Returns: {
+          availability_hours: number
+          collab_prefs: string
+          created_at: string
+          full_name: string
+          id: string
+          interests: string[]
+          intro: string
+          is_sample: boolean
+          past_projects: string
+          portfolio_links: string[]
+          soft_skills: string[]
+          tech_skills: string[]
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
