@@ -40,11 +40,11 @@ function ProfilePage() {
     e.preventDefault();
     const portfolio_links = links.split(/\s+/).filter(Boolean);
     const p = schema.safeParse({ ...f, portfolio_links });
-    if (!p.success) return toast.error(p.error.issues[0].message);
+    if (!p.success) return void toast.error(p.error.issues[0]?.message);
     setBusy(true);
     const { error } = await supabase.from("profiles").update({ ...p.data, tech_skills: f.tech_skills, soft_skills: f.soft_skills, interests: f.interests, updated_at: new Date().toISOString() }).eq("id", f.id);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     toast.success("Profile saved");
     invalidate();
   };
