@@ -19,24 +19,31 @@ export function useMyProfile() {
   });
 }
 
+// Other students' rows are read through a directory function that omits account identifiers (user_id).
+async function fetchDirectory() {
+  const { data, error } = await supabase.rpc("student_directory");
+  if (error) throw error;
+  return (data ?? []) as unknown as Profile[];
+}
+
 export function useProfiles() {
-  return useQuery({
-    queryKey: ["profiles"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("is_sample").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
+  return useQuery({ queryKey: ["profiles"], queryFn: fetchDirectory });
 }
 
 export function useProjects() {
   return useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projects").select("*, owner:profiles!projects_owner_id_fkey(id, full_name, is_sample)").order("is_sample").order("created_at", { ascending: false });
+      const [{ data, error }, dir] = await Promise.all([
+        supabase.from("projects").select("*").order("is_sample").order("created_at", { ascending: false }),
+        fetchDirectory(),
+      ]);
       if (error) throw error;
-      return data;
+      const byId = new Map(dir.map((p) => [p.id, p]));
+      return (data ?? []).map((pr) => {
+        const o = byId.get(pr.owner_id);
+        return { ...pr, owner: o ? { id: o.id, full_name: o.full_name, is_sample: o.is_sample } : null };
+      });
     },
   });
 }
