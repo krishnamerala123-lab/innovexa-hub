@@ -39,11 +39,11 @@ function NewProject() {
     e.preventDefault();
     if (!me?.profile) return;
     const p = schema.safeParse(f);
-    if (!p.success) return toast.error(p.error.issues[0].message);
+    if (!p.success) return void toast.error(p.error.issues[0]?.message);
     setBusy(true);
     const { data, error } = await supabase.from("projects").insert({ ...p.data, owner_id: me.profile.id, checklist: { problem: true } }).select("id").single();
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     toast.success("Project created — here are your best matches");
     invalidate();
     navigate({ to: "/projects/$id", params: { id: data.id }, search: { tab: "matches" } });

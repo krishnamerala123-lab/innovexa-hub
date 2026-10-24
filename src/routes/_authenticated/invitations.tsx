@@ -22,7 +22,7 @@ function Invitations() {
   });
   const respond = async (id: string, status: "accepted" | "declined") => {
     const { error } = await supabase.from("invitations").update({ status }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     toast.success(status === "accepted" ? "You joined the team!" : "Invitation declined");
     invalidate();
   };

@@ -44,18 +44,18 @@ function AuthPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = schema.safeParse(form);
-    if (!parsed.success) return toast.error(parsed.error.issues[0].message);
-    if (mode === "up" && !form.name.trim()) return toast.error("Please enter your name");
+    if (!parsed.success) return void toast.error(parsed.error.issues[0]?.message);
+    if (mode === "up" && !form.name.trim()) return void toast.error("Please enter your name");
     setBusy(true);
     if (mode === "up") {
       const { data, error } = await supabase.auth.signUp({ email: parsed.data.email, password: parsed.data.password, options: { emailRedirectTo: window.location.origin + "/dashboard", data: { full_name: form.name.trim() } } });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) return void toast.error(error.message);
       if (!data.session) setSent(true);
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email: parsed.data.email, password: parsed.data.password });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) return void toast.error(error.message);
     }
   };
 

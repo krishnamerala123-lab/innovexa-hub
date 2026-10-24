@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type Tab = "overview" | "matches" | "team" | "roadmap";
 export const Route = createFileRoute("/_authenticated/projects/$id")({
-  validateSearch: (s: Record<string, unknown>): { tab?: Tab } => ({ tab: ["overview", "matches", "team", "roadmap"].includes(s.tab as string) ? (s.tab as Tab) : undefined }),
+  validateSearch: (s: Record<string, unknown>): { tab?: Tab } => (["overview", "matches", "team", "roadmap"].includes(s["tab"] as string) ? { tab: s["tab"] as Tab } : {}),
   head: () => ({ meta: [{ title: "Project — Innovexa" }, { name: "description", content: "Project details, ranked teammate matches, team and roadmap." }, { property: "og:title", content: "Project — Innovexa" }, { property: "og:description", content: "Find teammates and follow the roadmap." }] }),
   component: ProjectPage,
 });
@@ -162,7 +162,7 @@ function Matches({ project, profiles, invites, missing, isOwner, onInvited }: { 
 
   const invite = async (p: Profile, score: number) => {
     const { error } = await supabase.from("invitations").insert({ project_id: project.id, profile_id: p.id, match_score: score, message: `You'd be a great fit (match ${score}).` });
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     toast.success(`Invitation sent to ${p.full_name}`);
     onInvited();
   };
@@ -175,11 +175,11 @@ function Matches({ project, profiles, invites, missing, isOwner, onInvited }: { 
           <p className="text-xs text-muted-foreground">Proposed defaults, configurable here. This scoring model has not been validated.</p>
         </div>
         {(Object.keys(w) as (keyof Weights)[]).map((k) => (
-          <div key={k} className="space-y-1.5"><div className="flex justify-between text-sm"><span className="capitalize">{k === "portfolio" ? "Portfolio evidence" : k}</span><span className="font-display font-bold">{w[k]}</span></div><Slider value={[w[k]]} max={100} step={5} onValueChange={([v]) => setW({ ...w, [k]: v })} /></div>
+          <div key={k} className="space-y-1.5"><div className="flex justify-between text-sm"><span className="capitalize">{k === "portfolio" ? "Portfolio evidence" : k}</span><span className="font-display font-bold">{w[k]}</span></div><Slider value={[w[k]]} max={100} step={5} onValueChange={([v]) => setW({ ...w, [k]: v ?? 0 })} /></div>
         ))}
         <Button variant="outline" size="sm" className="w-full" onClick={() => setW(DEFAULT_WEIGHTS)}>Reset to proposed (50/25/15/10)</Button>
         <hr />
-        <div className="space-y-1.5"><div className="flex justify-between text-sm"><span>Minimum score</span><span className="font-bold">{minScore}</span></div><Slider value={[minScore]} max={100} step={5} onValueChange={([v]) => setMin(v)} /></div>
+        <div className="space-y-1.5"><div className="flex justify-between text-sm"><span>Minimum score</span><span className="font-bold">{minScore}</span></div><Slider value={[minScore]} max={100} step={5} onValueChange={([v]) => setMin(v ?? 0)} /></div>
         <div className="flex items-center justify-between"><Label htmlFor="real">Registered students only</Label><Switch id="real" checked={realOnly} onCheckedChange={setRealOnly} /></div>
         <div className="flex items-center justify-between"><Label htmlFor="gap">Fills a missing skill</Label><Switch id="gap" checked={gapOnly} onCheckedChange={setGapOnly} /></div>
         <Select value={sort} onValueChange={setSort}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="score">Sort: match score</SelectItem><SelectItem value="skills">Sort: skills matched</SelectItem><SelectItem value="availability">Sort: availability</SelectItem></SelectContent></Select>
