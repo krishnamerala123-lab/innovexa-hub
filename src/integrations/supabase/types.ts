@@ -169,11 +169,60 @@ export type Database = {
           },
         ]
       }
+      roadmap_submissions: {
+        Row: {
+          evidence: string
+          fields: Json
+          id: string
+          milestone: number
+          project_id: string
+          review_note: string
+          reviewed_by: string | null
+          status: string
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          evidence?: string
+          fields?: Json
+          id?: string
+          milestone: number
+          project_id: string
+          review_note?: string
+          reviewed_by?: string | null
+          status?: string
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          evidence?: string
+          fields?: Json
+          id?: string
+          milestone?: number
+          project_id?: string
+          review_note?: string
+          reviewed_by?: string | null
+          status?: string
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_submissions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      approved_roadmap_stage: { Args: { _project: string }; Returns: number }
+      can_submit_roadmap: { Args: { _project: string }; Returns: boolean }
       my_profile_id: { Args: never; Returns: string }
       owns_project: { Args: { _project: string }; Returns: boolean }
       student_directory: {

@@ -15,6 +15,13 @@
       "when": 1792848555065,
       "tag": "0001_restrict_profile_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792907330133,
+      "tag": "0002_roadmap_evidence_review",
+      "breakpoints": true
     }
   ]
 }
