@@ -2,11 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, CheckCircle2, Circle, Clock, Send, Trash2, Users } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Send, Trash2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInvalidate, useMyProfile, useProfiles, type Profile } from "@/lib/data";
 import { computeMatch, DEFAULT_WEIGHTS, missingTeamSkills, type Weights } from "@/lib/matching";
-import { CHECKLIST, ROADMAP, stageLabel } from "@/lib/roadmap";
+import { CHECKLIST, stageLabel } from "@/lib/roadmap";
+import { RoadmapEvidence } from "@/components/RoadmapEvidence";
 import { Avatar, Chip, EmptyState, ProfileCard, SampleBadge, ScoreRing } from "@/components/Cards";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +32,11 @@ function ProjectPage() {
   const { data: profiles = [] } = useProfiles();
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
-    queryFn: async () => (await supabase.from("projects").select("*").eq("id", id).maybeSingle()).data,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
   });
   const { data: invites = [] } = useQuery({
     queryKey: ["project-invites", id],
@@ -49,7 +54,7 @@ function ProjectPage() {
   const team = [...(owner ? [owner] : []), ...accepted];
   const missing = missingTeamSkills(project.required_skills, team);
 
-  const update = async (patch: { checklist?: Record<string, boolean>; roadmap_stage?: number }) => {
+  const update = async (patch: { checklist?: Record<string, boolean> }) => {
     const { error } = await supabase.from("projects").update(patch).eq("id", id);
     if (error) toast.error(error.message); else invalidate();
   };
@@ -59,7 +64,7 @@ function ProjectPage() {
       <div className="rounded-3xl border bg-card p-6 shadow-card">
         <div className="flex flex-wrap items-center gap-2"><Chip>{stageLabel(project.stage)}</Chip><SampleBadge sample={project.is_sample} />{isOwner && <Chip hit>You own this</Chip>}</div>
         <h1 className="mt-3 text-3xl font-bold">{project.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">by {owner?.full_name ?? "Unknown"} · Roadmap stage {project.roadmap_stage} of 6</p>
+        <p className="mt-1 text-sm text-muted-foreground">by {owner?.full_name ?? "Unknown"}</p>
         {isOwner && <Button variant="ghost" size="sm" className="mt-3 text-destructive" onClick={async () => { if (!confirm("Delete this project?")) return; await supabase.from("projects").delete().eq("id", id); invalidate(); navigate({ to: "/projects" }); }}><Trash2 />Delete</Button>}
       </div>
 
@@ -111,7 +116,7 @@ function ProjectPage() {
         <TabsContent value="roadmap" className="mt-4 grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border bg-card p-5 shadow-card">
             <h2 className="font-semibold">Idea validation checklist</h2>
-            <p className="mb-4 text-sm text-muted-foreground">{Object.values(project.checklist as Record<string, boolean>).filter(Boolean).length} of {CHECKLIST.length} complete</p>
+            <p className="mb-4 text-sm text-muted-foreground">{Object.values(project.checklist as Record<string, boolean>).filter(Boolean).length} of {CHECKLIST.length} checked · Planning notes</p>
             <ul className="space-y-3">
               {CHECKLIST.map((c) => { const done = !!(project.checklist as Record<string, boolean>)[c.key]; return (
                 <li key={c.key} className="flex gap-3">
@@ -121,18 +126,7 @@ function ProjectPage() {
             </ul>
           </div>
           <div className="rounded-2xl border bg-card p-5 shadow-card">
-            <h2 className="mb-4 font-semibold">Roadmap</h2>
-            <ol className="space-y-3">
-              {ROADMAP.map((r) => { const done = r.n < project.roadmap_stage, cur = r.n === project.roadmap_stage; return (
-                <li key={r.n} className={`flex gap-3 rounded-xl p-3 ${cur ? "bg-accent" : ""}`}>
-                  <span className={`grid size-8 shrink-0 place-items-center rounded-full font-display text-sm font-bold ${done ? "bg-success text-primary-foreground" : cur ? "bg-highlight text-highlight-foreground" : "bg-secondary text-muted-foreground"}`}>{done ? <Check className="size-4" /> : r.n}</span>
-                  <div className="flex-1"><p className="font-medium">{r.title}</p><p className="text-sm text-muted-foreground">{r.desc}</p>
-                    {cur && r.n === 3 && missing.length > 0 && <p className="mt-1 text-sm">Missing skills: {missing.join(", ")} — <Link to="/projects/$id" params={{ id }} search={{ tab: "matches" }} className="font-semibold text-primary">find teammates</Link></p>}
-                    {cur && isOwner && <Button size="sm" className="mt-2" onClick={() => update({ roadmap_stage: Math.min(7, r.n + 1) })}>Mark complete</Button>}
-                  </div>
-                </li>); })}
-            </ol>
-            {project.roadmap_stage > 6 && <p className="mt-4 font-semibold text-success">🚀 All stages complete — ready to launch!</p>}
+            <RoadmapEvidence projectId={id} isOwner={isOwner} canSubmit={isOwner || invites.some((i) => i.profile_id === myId && i.status === "accepted")} onSaved={invalidate} />
           </div>
         </TabsContent>
       </Tabs>

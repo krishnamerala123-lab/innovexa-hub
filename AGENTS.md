@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Other students' profiles are read only via the student_directory() database function; the profiles table SELECT policy is own-row only. Why: hides account identifiers while keeping matching working.
+- Roadmap evidence is stored separately from legacy planning notes; database triggers validate evidence and review transitions and derive completion from approved submissions. Why: direct database calls cannot bypass milestone approval.

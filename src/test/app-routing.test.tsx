@@ -14,4 +14,10 @@ describe("App routing", () => {
 
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
+  it("opens unique project detail paths rather than the project listing", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    const matches = router.matchRoutes("/projects/10000000-0000-0000-0000-000000000001");
+    expect(matches.at(-1)?.routeId).toBe("/_authenticated/projects/$id");
+    expect(matches.at(-1)?.params["id"]).toBe("10000000-0000-0000-0000-000000000001");
+  });
 });

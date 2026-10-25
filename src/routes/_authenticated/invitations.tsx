@@ -18,7 +18,12 @@ function Invitations() {
   const pid = me?.profile?.id;
   const { data = [], isLoading } = useQuery({
     queryKey: ["my-invites", pid], enabled: !!pid,
-    queryFn: async () => (await supabase.from("invitations").select("*, project:projects(id, title, problem)").eq("profile_id", pid!).order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => {
+      if (!pid) return [];
+      const { data, error } = await supabase.from("invitations").select("*, project:projects(id, title, problem)").eq("profile_id", pid).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
   });
   const respond = async (id: string, status: "accepted" | "declined") => {
     const { error } = await supabase.from("invitations").update({ status }).eq("id", id);
@@ -33,11 +38,11 @@ function Invitations() {
         <div className="space-y-3">
           {data.map((i) => (
             <div key={i.id} className="flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-card sm:flex-row sm:items-center">
-              <div className="flex-1">
-                {i.project && <Link to="/projects/$id" params={{ id: i.project.id }} className="font-semibold hover:text-primary">{i.project.title}</Link>}
+              <Link to="/projects/$id" params={{ id: i.project_id }} className="min-w-0 flex-1 hover:text-primary">
+                <span className="font-semibold">{i.project?.title ?? "Open project"}</span>
                 <p className="line-clamp-1 text-sm text-muted-foreground">{i.project?.problem}</p>
                 <p className="mt-1 text-sm">“{i.message}”</p>
-              </div>
+              </Link>
               {i.status === "pending" ? (
                 <div className="flex gap-2"><Button onClick={() => respond(i.id, "accepted")}>Accept</Button><Button variant="outline" onClick={() => respond(i.id, "declined")}>Decline</Button></div>
               ) : <Chip hit={i.status === "accepted"}>{i.status}</Chip>}
