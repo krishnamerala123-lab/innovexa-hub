@@ -36,12 +36,13 @@ export function ProfileCard({ p, highlight = [], children }: { p: Profile; highl
       <div className="flex items-start gap-3">
         <Avatar name={p.full_name} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-semibold">{p.full_name || "Unnamed student"}</h3><SampleBadge sample={p.is_sample} /></div>
+          <div className="flex flex-wrap items-center gap-2"><Link to="/students/$id" params={{ id: p.id }} className="truncate font-semibold hover:text-primary"><h3 className="truncate">{p.full_name || "Unnamed student"}</h3></Link><SampleBadge sample={p.is_sample} /></div>
           <p className="line-clamp-2 text-sm text-muted-foreground">{p.intro || "No introduction yet."}</p>
         </div>
       </div>
       <div className="flex flex-wrap gap-1">{[...p.tech_skills, ...p.soft_skills].slice(0, 8).map((s) => <Chip key={s} hit={hl.has(s.toLowerCase())}>{s}</Chip>)}</div>
       <div className="flex items-center gap-3 text-xs text-muted-foreground"><Clock className="size-3.5" />{p.availability_hours} h/week{p.interests.length > 0 && <span>· {p.interests.slice(0, 3).join(", ")}</span>}</div>
+      <Link to="/students/$id" params={{ id: p.id }} className="text-sm font-semibold text-primary hover:underline">View profile</Link>
       {children}
     </div>
   );
