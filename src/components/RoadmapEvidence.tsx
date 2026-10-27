@@ -30,12 +30,12 @@ export function RoadmapEvidence({ projectId, canSubmit, isOwner, onSaved }: { pr
   </div>;
 }
 
-function Milestone({ projectId, milestone, title, row, isOwner, onSaved }: { projectId: string; milestone: number; title: string; row?: Submission; isOwner: boolean; onSaved: () => void }) {
+function Milestone({ projectId, milestone, title, row, isOwner, onSaved }: { projectId: string; milestone: number; title: string; row?: Submission | undefined; isOwner: boolean; onSaved: () => void }) {
   const storedFields = row?.fields && typeof row.fields === "object" && !Array.isArray(row.fields) ? Object.fromEntries(Object.entries(row.fields).filter((entry): entry is [string, string] => typeof entry[1] === "string")) : {};
   return <MilestoneForm key={`${row?.updated_at ?? "new"}-${milestone}`} projectId={projectId} milestone={milestone} title={title} row={row} initialFields={storedFields} isOwner={isOwner} onSaved={onSaved} />;
 }
 
-function MilestoneForm({ projectId, milestone, title, row, initialFields, isOwner, onSaved }: { projectId: string; milestone: number; title: string; row?: Submission; initialFields: Record<string, string>; isOwner: boolean; onSaved: () => void }) {
+function MilestoneForm({ projectId, milestone, title, row, initialFields, isOwner, onSaved }: { projectId: string; milestone: number; title: string; row?: Submission | undefined; initialFields: Record<string, string>; isOwner: boolean; onSaved: () => void }) {
   const [fields, setFields] = useState(initialFields);
   const [evidence, setEvidence] = useState(row?.evidence ?? "");
   const [note, setNote] = useState("");

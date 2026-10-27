@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/_authenticated/students")({
+export const Route = createFileRoute("/_authenticated/students/")({
   head: () => ({ meta: [{ title: "Students — Innovexa" }, { name: "description", content: "Browse student profiles by skill and interest." }, { property: "og:title", content: "Students — Innovexa" }, { property: "og:description", content: "Find collaborators with complementary skills." }] }),
   component: Students,
 });
