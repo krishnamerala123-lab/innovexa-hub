@@ -22,6 +22,13 @@
       "when": 1792907330133,
       "tag": "0002_roadmap_evidence_review",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793208052477,
+      "tag": "0003_project_privacy_and_owner_guards",
+      "breakpoints": true
     }
   ]
 }

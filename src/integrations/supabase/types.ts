@@ -110,53 +110,116 @@ export type Database = {
         }
         Relationships: []
       }
+      project_join_requests: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          profile_id: string
+          project_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string
+          profile_id: string
+          project_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          profile_id?: string
+          project_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_join_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_join_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
+          available_positions: string[]
           checklist: Json
+          confidential_notes: string
           created_at: string
+          creator_user_id: string | null
+          document_links: string[]
           expected_hours: number
+          general_solution: string
           id: string
           interests: string[]
           is_sample: boolean
           owner_id: string
+          privacy: string
           problem: string
           required_skills: string[]
           roadmap_stage: number
           solution: string
           stage: string
           target_users: string
+          technical_notes: string
           title: string
         }
         Insert: {
+          available_positions?: string[]
           checklist?: Json
+          confidential_notes?: string
           created_at?: string
+          creator_user_id?: string | null
+          document_links?: string[]
           expected_hours?: number
+          general_solution?: string
           id?: string
           interests?: string[]
           is_sample?: boolean
           owner_id: string
+          privacy?: string
           problem?: string
           required_skills?: string[]
           roadmap_stage?: number
           solution?: string
           stage?: string
           target_users?: string
+          technical_notes?: string
           title: string
         }
         Update: {
+          available_positions?: string[]
           checklist?: Json
+          confidential_notes?: string
           created_at?: string
+          creator_user_id?: string | null
+          document_links?: string[]
           expected_hours?: number
+          general_solution?: string
           id?: string
           interests?: string[]
           is_sample?: boolean
           owner_id?: string
+          privacy?: string
           problem?: string
           required_skills?: string[]
           roadmap_stage?: number
           solution?: string
           stage?: string
           target_users?: string
+          technical_notes?: string
           title?: string
         }
         Relationships: [
@@ -223,8 +286,37 @@ export type Database = {
     Functions: {
       approved_roadmap_stage: { Args: { _project: string }; Returns: number }
       can_submit_roadmap: { Args: { _project: string }; Returns: boolean }
+      discoverable_project: { Args: { _project: string }; Returns: boolean }
+      has_project_access: { Args: { _project: string }; Returns: boolean }
       my_profile_id: { Args: never; Returns: string }
       owns_project: { Args: { _project: string }; Returns: boolean }
+      project_discovery: {
+        Args: never
+        Returns: {
+          available_positions: string[]
+          checklist: Json
+          created_at: string
+          expected_hours: number
+          id: string
+          interests: string[]
+          is_sample: boolean
+          owner_id: string
+          privacy: string
+          problem: string
+          required_skills: string[]
+          roadmap_stage: number
+          solution: string
+          stage: string
+          target_users: string
+          title: string
+        }[]
+      }
+      project_team: {
+        Args: { _project: string }
+        Returns: {
+          profile_id: string
+        }[]
+      }
       student_directory: {
         Args: never
         Returns: {
