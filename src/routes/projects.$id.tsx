@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { isProjectOwner } from "@/lib/project-privacy";
 import { ProjectSettings } from "@/components/ProjectSettings";
 import { ProjectJoinRequests } from "@/components/ProjectJoinRequests";
+import { ProjectPublicLayout } from "@/components/ProjectPublicLayout";
 
 type Tab = "overview" | "matches" | "team" | "roadmap";
 export const Route = createFileRoute("/projects/$id")({
@@ -47,18 +48,17 @@ function ProjectPage() {
     },
   });
   const { data: invites = [] } = useQuery({
-    queryKey: ["project-invites", id],
+    queryKey: ["project-invites", id], enabled: !!me?.profile,
     queryFn: async () => (await supabase.from("invitations").select("*").eq("project_id", id).order("created_at", { ascending: false })).data ?? [],
   });
-  const { data: memberIds = [] } = useQuery({ queryKey: ["project-team", id], queryFn: async () => { const { data, error } = await supabase.rpc("project_team", { _project: id }); if (error) throw error; return data ?? []; } });
+  const { data: memberIds = [] } = useQuery({ queryKey: ["project-team", id], enabled: !!me?.profile, queryFn: async () => { const { data, error } = await supabase.rpc("project_team", { _project: id }); if (error) throw error; return data ?? []; } });
 
-  if (isLoading || !me?.profile) return <p className="text-muted-foreground">Loading…</p>;
-  if (!project) return <EmptyState icon={<Users />} title="Project not found" text="It may have been deleted." action={<Button asChild><Link to="/projects">Back to projects</Link></Button>} />;
+  if (isLoading) return <ProjectPublicLayout><p className="text-muted-foreground">Loading…</p></ProjectPublicLayout>;
+  if (!project) return <ProjectPublicLayout><EmptyState icon={<Users />} title="Project not found" text="It is unavailable or you do not have access." action={<Button asChild><Link to="/projects">Back to projects</Link></Button>} /></ProjectPublicLayout>;
 
   const fullProject = project.full;
   const row = project.project;
-  const myId = me.profile.id;
-  const isOwner = fullProject ? isProjectOwner(fullProject, me.profile) : false;
+  const isOwner = fullProject ? isProjectOwner(fullProject, me?.profile) : false;
   const byId = new Map(profiles.map((p) => [p.id, p]));
   const owner = byId.get(row.owner_id);
   const accepted = memberIds.filter((i) => i.profile_id !== row.owner_id).map((i) => byId.get(i.profile_id)).filter(Boolean) as Profile[];
@@ -66,19 +66,19 @@ function ProjectPage() {
   const missing = missingTeamSkills(row.required_skills, team);
 
   const update = async (patch: { checklist?: Record<string, boolean> }) => {
-    if (!isOwner || !me.userId) return void toast.error("Only the project owner may edit this project");
+    if (!isOwner || !me?.userId) return void toast.error("Only the project owner may edit this project");
     const { error } = await supabase.from("projects").update(patch).eq("id", id).eq("creator_user_id", me.userId).select("id").single();
     if (error) toast.error(error.message); else invalidate();
   };
   const remove = async () => {
-    if (!isOwner || !me.userId || !confirm("Delete this project?")) return;
+    if (!isOwner || !me?.userId || !confirm("Delete this project?")) return;
     const { data, error } = await supabase.from("projects").delete().eq("id", id).eq("creator_user_id", me.userId).select("id").single();
     if (error || !data) return void toast.error(error?.message ?? "Project was not deleted");
     invalidate(); navigate({ to: "/projects" });
   };
 
   return (
-    <div className="space-y-6">
+    <ProjectPublicLayout><div className="space-y-6">
       <div className="rounded-3xl border bg-card p-6 shadow-card">
         <div className="flex flex-wrap items-center gap-2"><Chip>{stageLabel(row.stage)}</Chip><SampleBadge sample={row.is_sample} /><Chip>{row.privacy.replaceAll("_", " ")}</Chip>{isOwner && <Chip hit>You own this</Chip>}</div>
         <h1 className="mt-3 text-3xl font-bold">{row.title}</h1>
@@ -90,9 +90,9 @@ function ProjectPage() {
       <Tabs value={tab} onValueChange={(v) => navigate({ to: "/projects/$id", params: { id }, search: { tab: v as Tab }, replace: true })}>
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="matches">Matches</TabsTrigger>
-          <TabsTrigger value="team">Team & invites</TabsTrigger>
-          <TabsTrigger value="roadmap">Validation & roadmap</TabsTrigger>
+          {me?.profile && <TabsTrigger value="matches">Matches</TabsTrigger>}
+          {me?.profile && <TabsTrigger value="team">Team & invites</TabsTrigger>}
+          {me?.profile && <TabsTrigger value="roadmap">Validation & roadmap</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" className="mt-4 grid gap-4 md:grid-cols-2">
@@ -104,7 +104,7 @@ function ProjectPage() {
           <Block title="Interests">{row.interests.length ? <div className="flex flex-wrap gap-1">{row.interests.map((s) => <Chip key={s}>{s}</Chip>)}</div> : "—"}</Block>
           <Block title="Available team positions">{row.available_positions.join(", ") || "—"}</Block>
           {fullProject && <><Block title="Technical implementation">{fullProject.technical_notes || "—"}</Block><Block title="Confidential notes">{fullProject.confidential_notes || "—"}</Block><Block title="Private documents">{fullProject.document_links.map((url) => <a className="block break-all text-primary underline" key={url} href={url} target="_blank" rel="noreferrer">{url}</a>)}</Block></>}
-          {!isOwner && <ProjectJoinRequests projectId={id} isOwner={false} hasAccess={!!fullProject} privacy={row.privacy} sample={row.is_sample} onSaved={invalidate} />}
+          {!isOwner && (me?.profile ? <ProjectJoinRequests projectId={id} isOwner={false} hasAccess={!!fullProject} privacy={row.privacy} sample={row.is_sample} onSaved={invalidate} /> : <Button asChild><Link to="/auth">Sign in to request to join</Link></Button>)}
         </TabsContent>
 
         <TabsContent value="matches" className="mt-4">
@@ -153,7 +153,7 @@ function ProjectPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </div></ProjectPublicLayout>
   );
 }
 

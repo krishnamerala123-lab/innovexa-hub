@@ -26,7 +26,7 @@ function Growth() {
   const p = me?.profile;
   const { data: joined = [] } = useQuery({
     queryKey: ["joined", p?.id], enabled: !!p,
-    queryFn: async () => (await supabase.from("invitations").select("project_id").eq("profile_id", p!.id).eq("status", "accepted")).data?.map((r) => r.project_id) ?? [],
+    queryFn: async () => { if (!p) return []; const [invites, requests] = await Promise.all([supabase.from("invitations").select("project_id").eq("profile_id", p.id).eq("status", "accepted"), supabase.from("project_join_requests").select("project_id").eq("profile_id", p.id).eq("status", "accepted")]); return [...(invites.data ?? []), ...(requests.data ?? [])].map((r) => r.project_id); },
   });
   if (!p) return <p className="text-muted-foreground">Loading…</p>;
   const showcase = projects.filter((x) => x.owner_id === p.id || joined.includes(x.id));

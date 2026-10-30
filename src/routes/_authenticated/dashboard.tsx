@@ -19,7 +19,7 @@ function Dashboard() {
   const p = me?.profile;
   const { data: pending = 0 } = useQuery({
     queryKey: ["pending-count", p?.id], enabled: !!p,
-    queryFn: async () => (await supabase.from("invitations").select("id", { count: "exact", head: true }).eq("profile_id", p!.id).eq("status", "pending")).count ?? 0,
+    queryFn: async () => { if (!p) return 0; return (await supabase.from("invitations").select("id", { count: "exact", head: true }).eq("profile_id", p.id).eq("status", "pending")).count ?? 0; },
   });
   if (!p) return <p className="text-muted-foreground">Loading…</p>;
   const mine = projects.filter((x) => x.owner_id === p.id);
