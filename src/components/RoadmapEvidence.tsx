@@ -13,7 +13,7 @@ import { Chip } from "@/components/Cards";
 type Submission = Tables<"roadmap_submissions">;
 export function RoadmapEvidence({ projectId, canSubmit, isOwner, onSaved }: { projectId: string; canSubmit: boolean; isOwner: boolean; onSaved: () => void }) {
   const { data: rows = [], isLoading, error, refetch } = useQuery({
-    queryKey: ["roadmap-evidence", projectId],
+    queryKey: ["roadmap-evidence", projectId], enabled: canSubmit,
     queryFn: async () => {
       const { data, error } = await supabase.from("roadmap_submissions").select("*").eq("project_id", projectId).order("milestone");
       if (error) throw error;

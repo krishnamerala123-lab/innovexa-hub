@@ -11,3 +11,5 @@
 
 - Other students' profiles are read only via the student_directory() database function; the profiles table SELECT policy is own-row only. Why: hides account identifiers while keeping matching working.
 - Roadmap evidence is stored separately from legacy planning notes; database triggers validate evidence and review transitions and derive completion from approved submissions. Why: direct database calls cannot bypass milestone approval.
+- Project discovery uses the narrow project_discovery function; full project rows require owner or approved-team RLS access, and creator identity is immutable. Why: confidential fields must not leak through list queries or forged ownership.
+- Approved join requests and accepted invitations both grant team access; invitation identity and request review transitions are database-guarded. Why: membership cannot be forged by rewriting an invitation or approving a request as a non-owner.
