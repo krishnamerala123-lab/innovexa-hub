@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export const Route = createFileRoute("/_authenticated/projects/")({
+export const Route = createFileRoute("/projects/")({
   head: () => ({ meta: [{ title: "Projects — Innovexa" }, { name: "description", content: "Browse and search student project listings." }, { property: "og:title", content: "Projects — Innovexa" }, { property: "og:description", content: "Find a project that needs your skills." }] }),
   component: Projects,
 });

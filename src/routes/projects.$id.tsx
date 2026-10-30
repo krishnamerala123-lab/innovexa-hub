@@ -20,7 +20,7 @@ import { ProjectSettings } from "@/components/ProjectSettings";
 import { ProjectJoinRequests } from "@/components/ProjectJoinRequests";
 
 type Tab = "overview" | "matches" | "team" | "roadmap";
-export const Route = createFileRoute("/_authenticated/projects/$id")({
+export const Route = createFileRoute("/projects/$id")({
   validateSearch: (s: Record<string, unknown>): { tab?: Tab } => (["overview", "matches", "team", "roadmap"].includes(s["tab"] as string) ? { tab: s["tab"] as Tab } : {}),
   head: () => ({ meta: [{ title: "Project — Innovexa" }, { name: "description", content: "Project details, ranked teammate matches, team and roadmap." }, { property: "og:title", content: "Project — Innovexa" }, { property: "og:description", content: "Find teammates and follow the roadmap." }] }),
   component: ProjectPage,
