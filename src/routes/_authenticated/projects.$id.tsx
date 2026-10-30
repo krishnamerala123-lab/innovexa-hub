@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Clock, Send, Trash2, Users } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Send, Trash2, Users, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInvalidate, useMyProfile, useProfiles, type Profile } from "@/lib/data";
 import { computeMatch, DEFAULT_WEIGHTS, missingTeamSkills, type Weights } from "@/lib/matching";
@@ -15,6 +15,9 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { isProjectOwner } from "@/lib/project-privacy";
+import { ProjectSettings } from "@/components/ProjectSettings";
+import { ProjectJoinRequests } from "@/components/ProjectJoinRequests";
 
 type Tab = "overview" | "matches" | "team" | "roadmap";
 export const Route = createFileRoute("/_authenticated/projects/$id")({
@@ -28,6 +31,7 @@ function ProjectPage() {
   const { tab = "overview" } = Route.useSearch();
   const navigate = useNavigate();
   const invalidate = useInvalidate();
+  const [editing, setEditing] = useState(false);
   const { data: me } = useMyProfile();
   const { data: profiles = [] } = useProfiles();
   const { data: project, isLoading } = useQuery({
@@ -35,37 +39,52 @@ function ProjectPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
       if (error) throw error;
-      return data;
+      if (data) return { project: data, full: data };
+      const discovery = await supabase.rpc("project_discovery");
+      if (discovery.error) throw discovery.error;
+      const summary = discovery.data?.find((p) => p.id === id);
+      return summary ? { project: summary, full: null } : null;
     },
   });
   const { data: invites = [] } = useQuery({
     queryKey: ["project-invites", id],
     queryFn: async () => (await supabase.from("invitations").select("*").eq("project_id", id).order("created_at", { ascending: false })).data ?? [],
   });
+  const { data: memberIds = [] } = useQuery({ queryKey: ["project-team", id], queryFn: async () => { const { data, error } = await supabase.rpc("project_team", { _project: id }); if (error) throw error; return data ?? []; } });
 
   if (isLoading || !me?.profile) return <p className="text-muted-foreground">Loading…</p>;
   if (!project) return <EmptyState icon={<Users />} title="Project not found" text="It may have been deleted." action={<Button asChild><Link to="/projects">Back to projects</Link></Button>} />;
 
+  const fullProject = project.full;
+  const row = project.project;
   const myId = me.profile.id;
-  const isOwner = project.owner_id === myId;
+  const isOwner = fullProject ? isProjectOwner(fullProject, me.profile) : false;
   const byId = new Map(profiles.map((p) => [p.id, p]));
-  const owner = byId.get(project.owner_id);
-  const accepted = invites.filter((i) => i.status === "accepted").map((i) => byId.get(i.profile_id)).filter(Boolean) as Profile[];
+  const owner = byId.get(row.owner_id);
+  const accepted = memberIds.filter((i) => i.profile_id !== row.owner_id).map((i) => byId.get(i.profile_id)).filter(Boolean) as Profile[];
   const team = [...(owner ? [owner] : []), ...accepted];
-  const missing = missingTeamSkills(project.required_skills, team);
+  const missing = missingTeamSkills(row.required_skills, team);
 
   const update = async (patch: { checklist?: Record<string, boolean> }) => {
-    const { error } = await supabase.from("projects").update(patch).eq("id", id);
+    if (!isOwner || !me.userId) return void toast.error("Only the project owner may edit this project");
+    const { error } = await supabase.from("projects").update(patch).eq("id", id).eq("creator_user_id", me.userId).select("id").single();
     if (error) toast.error(error.message); else invalidate();
+  };
+  const remove = async () => {
+    if (!isOwner || !me.userId || !confirm("Delete this project?")) return;
+    const { data, error } = await supabase.from("projects").delete().eq("id", id).eq("creator_user_id", me.userId).select("id").single();
+    if (error || !data) return void toast.error(error?.message ?? "Project was not deleted");
+    invalidate(); navigate({ to: "/projects" });
   };
 
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border bg-card p-6 shadow-card">
-        <div className="flex flex-wrap items-center gap-2"><Chip>{stageLabel(project.stage)}</Chip><SampleBadge sample={project.is_sample} />{isOwner && <Chip hit>You own this</Chip>}</div>
-        <h1 className="mt-3 text-3xl font-bold">{project.title}</h1>
+        <div className="flex flex-wrap items-center gap-2"><Chip>{stageLabel(row.stage)}</Chip><SampleBadge sample={row.is_sample} /><Chip>{row.privacy.replaceAll("_", " ")}</Chip>{isOwner && <Chip hit>You own this</Chip>}</div>
+        <h1 className="mt-3 text-3xl font-bold">{row.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">by {owner?.full_name ?? "Unknown"}</p>
-        {isOwner && <Button variant="ghost" size="sm" className="mt-3 text-destructive" onClick={async () => { if (!confirm("Delete this project?")) return; await supabase.from("projects").delete().eq("id", id); invalidate(); navigate({ to: "/projects" }); }}><Trash2 />Delete</Button>}
+        {isOwner && <div className="mt-3 flex gap-2"><Button variant="ghost" size="sm" onClick={() => setEditing(!editing)}><Pencil />Edit project</Button><Button variant="ghost" size="sm" className="text-destructive" onClick={remove}><Trash2 />Delete</Button></div>}
+        {editing && isOwner && fullProject && <ProjectSettings project={fullProject} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); invalidate(); }} />}
       </div>
 
       <Tabs value={tab} onValueChange={(v) => navigate({ to: "/projects/$id", params: { id }, search: { tab: v as Tab }, replace: true })}>
@@ -77,26 +96,30 @@ function ProjectPage() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-4 grid gap-4 md:grid-cols-2">
-          <Block title="Problem">{project.problem}</Block>
-          <Block title="Proposed solution">{project.solution || "—"}</Block>
-          <Block title="Target users">{project.target_users || "—"}</Block>
-          <Block title="Expected availability"><span className="inline-flex items-center gap-1"><Clock className="size-4" />{project.expected_hours} h/week per member</span></Block>
-          <Block title="Required skills (identified for matching)"><div className="flex flex-wrap gap-1">{project.required_skills.map((s) => <Chip key={s} hit={!missing.includes(s)}>{s}</Chip>)}</div><p className="mt-2 text-xs text-muted-foreground">Highlighted = already covered by the team.</p></Block>
-          <Block title="Interests">{project.interests.length ? <div className="flex flex-wrap gap-1">{project.interests.map((s) => <Chip key={s}>{s}</Chip>)}</div> : "—"}</Block>
+          <Block title="Problem">{row.problem}</Block>
+          <Block title="Proposed solution">{row.solution || (row.privacy === "approval_required" && !fullProject ? "Available to approved collaborators" : "—")}</Block>
+          {fullProject && <Block title="Target users">{fullProject.target_users || "—"}</Block>}
+          <Block title="Expected availability"><span className="inline-flex items-center gap-1"><Clock className="size-4" />{row.expected_hours} h/week per member</span></Block>
+          <Block title="Required skills (identified for matching)"><div className="flex flex-wrap gap-1">{row.required_skills.map((s) => <Chip key={s} hit={!missing.includes(s)}>{s}</Chip>)}</div></Block>
+          <Block title="Interests">{row.interests.length ? <div className="flex flex-wrap gap-1">{row.interests.map((s) => <Chip key={s}>{s}</Chip>)}</div> : "—"}</Block>
+          <Block title="Available team positions">{row.available_positions.join(", ") || "—"}</Block>
+          {fullProject && <><Block title="Technical implementation">{fullProject.technical_notes || "—"}</Block><Block title="Confidential notes">{fullProject.confidential_notes || "—"}</Block><Block title="Private documents">{fullProject.document_links.map((url) => <a className="block break-all text-primary underline" key={url} href={url} target="_blank" rel="noreferrer">{url}</a>)}</Block></>}
+          {!isOwner && <ProjectJoinRequests projectId={id} isOwner={false} hasAccess={!!fullProject} privacy={row.privacy} sample={row.is_sample} onSaved={invalidate} />}
         </TabsContent>
 
         <TabsContent value="matches" className="mt-4">
-          <Matches project={project} profiles={profiles.filter((p) => !team.some((t) => t.id === p.id))} invites={invites} missing={missing} isOwner={isOwner} onInvited={invalidate} />
+          <Matches project={row} profiles={profiles.filter((p) => !team.some((t) => t.id === p.id))} invites={invites} missing={missing} isOwner={isOwner} onInvited={invalidate} />
         </TabsContent>
 
         <TabsContent value="team" className="mt-4 space-y-6">
           <div>
             <h2 className="mb-3 font-semibold">Team members ({team.length})</h2>
-            <div className="grid gap-3 md:grid-cols-2">{team.map((m) => <div key={m.id} className="flex items-center gap-3 rounded-xl border bg-card p-4"><Avatar name={m.full_name} /><div className="flex-1"><p className="font-medium">{m.full_name}</p><p className="text-xs text-muted-foreground">{m.id === project.owner_id ? "Owner" : "Member"} · {[...m.tech_skills, ...m.soft_skills].slice(0, 4).join(", ")}</p></div><SampleBadge sample={m.is_sample} /></div>)}</div>
+            <div className="grid gap-3 md:grid-cols-2">{team.map((m) => <div key={m.id} className="flex items-center gap-3 rounded-xl border bg-card p-4"><Avatar name={m.full_name} /><div className="flex-1"><p className="font-medium">{m.full_name}</p><p className="text-xs text-muted-foreground">{m.id === row.owner_id ? "Owner" : "Member"} · {[...m.tech_skills, ...m.soft_skills].slice(0, 4).join(", ")}</p></div><SampleBadge sample={m.is_sample} /></div>)}</div>
             <p className="mt-3 text-sm">{missing.length ? <>Still missing: {missing.map((s) => <Chip key={s}>{s}</Chip>)}</> : <span className="text-success">All required skills are covered.</span>}</p>
           </div>
           {isOwner && (
             <div>
+              <ProjectJoinRequests projectId={id} isOwner hasAccess privacy={row.privacy} sample={row.is_sample} onSaved={invalidate} />
               <h2 className="mb-3 font-semibold">Invitations</h2>
               {invites.filter((i) => i.status !== "accepted").length === 0 ? <EmptyState icon={<Send />} title="No open invitations" text="Head to Matches to invite students who fill your skill gaps." /> : (
                 <div className="divide-y rounded-xl border bg-card">
@@ -116,17 +139,17 @@ function ProjectPage() {
         <TabsContent value="roadmap" className="mt-4 grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border bg-card p-5 shadow-card">
             <h2 className="font-semibold">Idea validation checklist</h2>
-            <p className="mb-4 text-sm text-muted-foreground">{Object.values(project.checklist as Record<string, boolean>).filter(Boolean).length} of {CHECKLIST.length} checked · Planning notes</p>
+            <p className="mb-4 text-sm text-muted-foreground">{Object.values(row.checklist as Record<string, boolean>).filter(Boolean).length} of {CHECKLIST.length} checked · Planning notes</p>
             <ul className="space-y-3">
-              {CHECKLIST.map((c) => { const done = !!(project.checklist as Record<string, boolean>)[c.key]; return (
+              {CHECKLIST.map((c) => { const done = !!(row.checklist as Record<string, boolean>)[c.key]; return (
                 <li key={c.key} className="flex gap-3">
-                  <button disabled={!isOwner} onClick={() => update({ checklist: { ...(project.checklist as Record<string, boolean>), [c.key]: !done } })} aria-label={`Toggle ${c.label}`} className="mt-0.5 disabled:cursor-default">{done ? <CheckCircle2 className="size-5 text-success" /> : <Circle className="size-5 text-muted-foreground" />}</button>
+                  <Button variant="ghost" size="icon" disabled={!isOwner} onClick={() => update({ checklist: { ...(row.checklist as Record<string, boolean>), [c.key]: !done } })} aria-label={`Toggle ${c.label}`} className="mt-0.5 shrink-0 disabled:cursor-default">{done ? <CheckCircle2 className="size-5 text-success" /> : <Circle className="size-5 text-muted-foreground" />}</Button>
                   <div><p className="font-medium">{c.label}</p><p className="text-sm text-muted-foreground">{c.hint}</p>{!done && <p className="mt-1 text-sm text-primary">Next action: {c.action}</p>}</div>
                 </li>); })}
             </ul>
           </div>
           <div className="rounded-2xl border bg-card p-5 shadow-card">
-            <RoadmapEvidence projectId={id} isOwner={isOwner} canSubmit={isOwner || invites.some((i) => i.profile_id === myId && i.status === "accepted")} onSaved={invalidate} />
+            <RoadmapEvidence projectId={id} isOwner={isOwner} canSubmit={!!fullProject} onSaved={invalidate} />
           </div>
         </TabsContent>
       </Tabs>
