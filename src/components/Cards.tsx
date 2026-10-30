@@ -48,7 +48,7 @@ export function ProfileCard({ p, highlight = [], children }: { p: Profile; highl
   );
 }
 
-type ProjectLike = { id: string; title: string; problem: string; required_skills: string[]; stage: string; expected_hours: number; is_sample: boolean; owner?: { full_name: string } | null };
+type ProjectLike = { id: string; title: string; problem: string; required_skills: string[]; stage: string; expected_hours: number; is_sample: boolean; privacy?: string; available_positions?: string[]; owner?: { full_name: string } | null };
 export function ProjectCard({ p, right }: { p: ProjectLike; right?: ReactNode }) {
   return (
     <Link to="/projects/$id" params={{ id: p.id }} className="group flex flex-col gap-3 rounded-2xl border bg-card p-5 shadow-card transition hover:-translate-y-0.5 hover:border-primary/40">
@@ -61,6 +61,8 @@ export function ProjectCard({ p, right }: { p: ProjectLike; right?: ReactNode })
         {right}
       </div>
       <p className="line-clamp-2 text-sm text-muted-foreground">{p.problem}</p>
+      {p.privacy && <p className="text-xs text-muted-foreground">{p.privacy === "private_team" ? "Private Team" : p.privacy === "approval_required" ? "Approval Required" : "Public Discovery"}</p>}
+      {!!p.available_positions?.length && <p className="text-xs text-muted-foreground">Open positions: {p.available_positions.join(", ")}</p>}
       <div className="flex flex-wrap gap-1">{p.required_skills.slice(0, 6).map((s) => <Chip key={s}>{s}</Chip>)}</div>
     </Link>
   );

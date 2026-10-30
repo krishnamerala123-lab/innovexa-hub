@@ -14,7 +14,7 @@ export function useMyProfile() {
       if (!u.user) return null;
       const { data, error } = await supabase.from("profiles").select("*").eq("user_id", u.user.id).maybeSingle();
       if (error) throw error;
-      return { profile: data, email: u.user.email ?? "" };
+      return { profile: data, email: u.user.email ?? "", userId: u.user.id };
     },
   });
 }
@@ -34,13 +34,17 @@ export function useProjects() {
   return useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
-      const [{ data, error }, dir] = await Promise.all([
+      const [{ data, error }, discovery, dir] = await Promise.all([
         supabase.from("projects").select("*").order("is_sample").order("created_at", { ascending: false }),
+        supabase.rpc("project_discovery"),
         fetchDirectory(),
       ]);
       if (error) throw error;
+      if (discovery.error) throw discovery.error;
       const byId = new Map(dir.map((p) => [p.id, p]));
-      return (data ?? []).map((pr) => {
+      const rows = new Map((discovery.data ?? []).map((p) => [p.id, p]));
+      for (const p of data ?? []) rows.set(p.id, p);
+      return [...rows.values()].map((pr) => {
         const o = byId.get(pr.owner_id);
         return { ...pr, owner: o ? { id: o.id, full_name: o.full_name, is_sample: o.is_sample } : null };
       });
